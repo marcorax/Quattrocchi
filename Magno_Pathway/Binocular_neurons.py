@@ -22,6 +22,7 @@ import numpy as np
 import scipy.io as sio
 import pickle
 import time
+from pathlib import Path
 from brian2 import amp, ms, mV, pA, mA, nS, nA, pF, us, volt, second, prefs,\
     SpikeMonitor, StateMonitor, figure, plot, show, xlabel, ylabel,\
     seed, xlim, ylim, subplot, network_operation, TimedArray,\
@@ -55,7 +56,8 @@ prefs.devices.cpp_standalone.openmp_threads = 8 #The maximum number of threads t
 #The default clock of the simulation
 defaultclock.dt = 1 * ms
 
-
+#Important to find the Path to the Data folder
+parent_folder=str(Path().resolve().parent)
 
 
 #%% Net Parameters
@@ -90,13 +92,13 @@ neuron_centers, num_stereo_cells = stereo_centers(input_size_x, input_size_y, sp
 # In the case of the artificial stimuli I will load the same file and then 
 # apply a disparity in the next section
 ## L
-inputFile = 'Data/PopulationData/Rotating_Artificial_Bar.data'
-#inputFile = 'Data/PopulationData/L_On_Moving_Bar.data'
+inputFile = parent_folder+'/Data/Magno_Population_Data/Rotating_Artificial_Bar.data'
+#inputFile = parent_folder+'/Data/Magno_Population_Data/L_On_Moving_Bar.data'
 fd = open(inputFile, 'rb')
 pop_data_L = pickle.load(fd)
 ## R
-inputFile = 'Data/PopulationData/Rotating_Artificial_Bar.data'
-#inputFile = 'Data/PopulationData/R_On_Moving_Bar.data'
+inputFile = parent_folder+'/Data/Magno_Population_Data/Rotating_Artificial_Bar.data'
+#inputFile = parent_folder+'/Data/Magno_Population_Data/R_On_Moving_Bar.data'
 fd = open(inputFile, 'rb')
 pop_data_R = pickle.load(fd)
 
@@ -372,11 +374,11 @@ stimuli_res_y = 180
 window_size_x = input_size_x
 window_size_y = input_size_y
 
-inputFile = 'Data/PopulationData/L_Moving_Bar_input.data'
+inputFile = parent_folder+'/Data/Magno_Population_Data/L_Moving_Bar_input.data'
 fd = open(inputFile, 'rb')
 Left_Retina = pickle.load(fd)
 
-inputFile = 'Data/PopulationData/R_Moving_Bar_input.data'
+inputFile = parent_folder+'/Data/Magno_Population_Data/R_Moving_Bar_input.data'
 fd = open(inputFile, 'rb')
 Right_Retina = pickle.load(fd)
 
@@ -819,7 +821,7 @@ OutMat['end'] = disparity_neurons_activity['end']
 
 
 
-sio.savemat('Data/Matlab Out/Bino_On_Moving_Bar.mat', OutMat)
+sio.savemat(parent_folder+'/Data/Magno_Matlab_Out/Bino_On_Moving_Bar.mat', OutMat)
 
 
 

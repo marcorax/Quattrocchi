@@ -21,6 +21,7 @@ import pyqtgraph.opengl as gl
 import numpy as np
 import pickle
 import time
+from pathlib import Path
 from brian2 import ms, mV, pA, nS, nA, pF, us, volt, second, prefs,\
     SpikeMonitor, StateMonitor, figure, plot, show, xlabel, ylabel,\
     seed, xlim, ylim, subplot, network_operation, TimedArray,\
@@ -48,6 +49,8 @@ prefs.devices.cpp_standalone.openmp_threads = 8 #The maximum number of threads t
 #The default clock of the simulation
 defaultclock.dt = 1 * ms
 
+#Important to find the Path to the Data folder
+parent_folder=str(Path().resolve().parent)
 
 #%% Net Parameters - Recorded Stimuli
 #run this only if you want to load and run recorded stimuli
@@ -135,7 +138,7 @@ total_num_neurons = num_neurons_sub_pop*num_orientations
  
 #%% DAVIS data extraction and saving - aedat 3.1, 3.0 - Recorded stimuli
 # Run this part only once to save everything in PopulationData
-numpyevents=eventsToPy(filename='Data/DAVIS Recordings/Events_R_Moving_Bar-2018_03_06_17_04_05.aedat', xdim=input_size_x, ydim=input_size_y)
+numpyevents=eventsToPy(filename=parent_folder+'/Data/DAVIS_Recordings/Events_R_Moving_Bar-2018_03_06_17_04_05.aedat', xdim=input_size_x, ydim=input_size_y)
 
 
 #final conversion and data saving
@@ -143,7 +146,7 @@ indInp2 = fromNPtoBrian(Events=numpyevents, xRes=input_size_x, uniqueflag=1, mil
 
 
 # Saving for later (useful if you want to run simulation on the same data multiple time )
-outputFile = 'Data/PopulationData/R_Moving_Bar_input.data'
+outputFile = parent_folder+'/Data/Magno_Population_Data/R_Moving_Bar_input.data'
 fw = open(outputFile, 'wb')
 pickle.dump(indInp2, fw)
 fw.close()
@@ -155,7 +158,7 @@ fw.close()
 #%% DAVIS data loading, chopping and variable renaming - Recorded stimuli
 
 # Loading data 
-inputFile = 'Data/PopulationData/R_Moving_Bar_input.data' 
+inputFile = parent_folder+'/Data/Magno_Population_Data/R_Moving_Bar_input.data' 
 fd = open(inputFile, 'rb')
 indInp2 = pickle.load(fd)
 
@@ -655,7 +658,7 @@ for k in range(num_orientations):
 pop_data['start'] = start
 pop_data['end'] = end
 
-outputFile = 'Data/PopulationData/Rotating_Artificial_Bar.data'
+outputFile = parent_folder+'/Data/Magno_Population_Data/Rotating_Artificial_Bar.data'
 fw = open(outputFile, 'wb')
 pickle.dump(pop_data, fw)
 fw.close()
