@@ -9,8 +9,8 @@ This script it has been developed on spyder, it is devided in sometimes
 indipendent subsections, marked with #%%, thus do not run the entire script as whole
 
 Using spyder is advised, also remember that the plots make use of pyqtgraph, 
-for its speed on intensive 3d plotting, for this reason remember to disable
-matplotlib default support on Spyder (Tools/preferences/IPython console/Graphics)
+for its speed on intensive 3d plotting, for this reason remember to change
+the backend from inline to automatic in (Tools/preferences/IPython console/Graphics)
  
 """
 
