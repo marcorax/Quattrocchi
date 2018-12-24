@@ -821,7 +821,7 @@ OutMat['end'] = disparity_neurons_activity['end']
 
 
 
-sio.savemat(parent_folder+'/Data/Magno_Matlab_Out/Bino_On_Moving_Bar.mat', OutMat)
+sio.savemat(parent_folder+'/Data/Parvo_Matlab_Out/Input_On_Moving_Bar.mat', OutMat)
 
 
 

@@ -2,8 +2,7 @@ clear
 close all
 clc
 tic
-addpath FUNCTIONS
-addpath DATA
+addpath Functions
 %%  POPULATION INIT
 n_scales = 5;           % NUMBER OF SCALE - SET ON IMAGE SIZE AND DISPARITY CONTENT: max scale number n_scale, so that (minimum image size) / (2^n_scale) > (2*filter_size)
                         %                                                            max disparity decoded = +/- [2^n_scales /(4*0.063)]
@@ -12,11 +11,11 @@ n_filters = 8;          % FIXED
 ori_thr = 0;            % FIXED
 
 % FILTER 11x11
-ph_shift_file='FILTERS/ph_shift_PH7_F0.25.mat';
-filter_file='FILTERS/Gt11B0.0833f0.25.mat';
+ph_shift_file='Filters/ph_shift_PH7_F0.25.mat';
+filter_file='Filters/Gt11B0.0833f0.25.mat';
 % % FILTER 43x43
-% filter='FILTERS/Gt43B0.0208f0.063.mat';
-% ph_shift='FILTERS/ph_shift_PH7_F0.063.mat';
+% filter='Filters/Gt43B0.0208f0.063.mat';
+% ph_shift='Filters/ph_shift_PH7_F0.063.mat';
 
 
 
@@ -24,8 +23,8 @@ filter_file='FILTERS/Gt11B0.0833f0.25.mat';
 
 Dataset = '/Moving Bar';
 
-load(['DATA/' Dataset(2:end) 'FramesR.mat']);
-load(['DATA/' Dataset(2:end) 'FramesL.mat']);
+load(['../Disparity/' Dataset(2:end) 'FramesR.mat']);
+load(['../Data/' Dataset(2:end) 'FramesL.mat']);
 
 Out=cell(length(FramesL),1);
 

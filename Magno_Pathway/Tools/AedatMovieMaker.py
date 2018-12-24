@@ -3,28 +3,31 @@
 
 ''' 
 This script decodes aedat file and extracts frames,
-that saves in png and .mat files
-
+that saves in png and .mat files, before running check aedatRecordR, aedatRecordL
+(input files) and outfolderR and outfolderL (output folders) 
 '''
-import os
-import struct
-import time
-import numpy as np
 import png
-from Davisloading import framesToPy
+import numpy as np
 import scipy.io as sio
+from pathlib import Path
+from Davisloading import framesToPy
 
 
 def find_nearest(array,value):
     idx = (np.abs(array-value)).argmin()
     return (idx)
 
+#Important to find the Path to the Data folder
+parent_folder=str(Path().resolve().parent.parent)
 
-aedatRecordR = "/home/marcorax93/Documenti/DAVIS Recordings/Frames_R_Moving_Bar-2018_03_06_17_04_05.aedat" 
-outfolderR = "/home/marcorax93/Documenti/Disparitydetector Brian2/Frames/Moving Bar/R/"
+dataset = "Moving_Bar"
+file = "-2018_03_06_17_04_05.aedat"
+aedatRecordR = parent_folder+"/Data/DAVIS_Recordings/Frames_R_"+dataset+file
+outfolderR = parent_folder+"/Data/Extracted_Frames/"+dataset+"/R/"
 
-aedatRecordL = "/home/marcorax93/Documenti/DAVIS Recordings/Frames_L_Moving_Bar-2018_03_06_17_04_05.aedat" 
-outfolderL = "/home/marcorax93/Documenti/Disparitydetector Brian2/Frames/Moving Bar/L/"
+aedatRecordL = parent_folder+"/Data/DAVIS_Recordings/Frames_L_"+dataset+file
+outfolderL = parent_folder+"/Data/Extracted_Frames/"+dataset+"/L/"
+
 
 xCameraRes=240
 yCameraRes=180
@@ -80,4 +83,4 @@ for index in np.argsort(timeR):
     framecounter += 1
     
         
-sio.savemat('Frametime.mat', {'timeL':timeL,'timeR':timeR})   
+sio.savemat(parent_folder+"/Data/Extracted_Frames/"+dataset+"/Frametime.mat", {'timeL':timeL,'timeR':timeR})   
