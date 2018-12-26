@@ -1,3 +1,7 @@
+%% Energy model
+% Originary energy model working only on frames, it is here implemented
+% to perform testing with the Quattrocchi model.
+
 clear
 close all
 clc
@@ -21,10 +25,11 @@ filter_file='Filters/Gt11B0.0833f0.25.mat';
 
 %% Load vL vR
 
-Dataset = '/Moving Bar';
+Dataset = '/Moving_Bar';
+FramesFolder = '../Data/Extracted_Frames';
 
-load(['../Disparity/' Dataset(2:end) 'FramesR.mat']);
-load(['../Data/' Dataset(2:end) 'FramesL.mat']);
+load([FramesFolder Dataset '/FramesR.mat']);
+load([FramesFolder Dataset '/FramesL.mat']);
 
 Out=cell(length(FramesL),1);
 
