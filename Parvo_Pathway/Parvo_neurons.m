@@ -1,6 +1,9 @@
+%% Parvo neurons, it refines the disparity computation from Magno neurons 
+% while producing a dense estimantion.
+
 clear all
 clc;
-addpath FUNCTIONS
+addpath Functions
 %Settings and Data
 NOrient=8;
 timeOffs=0.001;
@@ -8,13 +11,15 @@ xRes = 240;
 yRes = 180;
 xInputSize = 40;
 yInputSize = 80;
-FramesFolder = 'DATA/';
-SpikesFolder = '/home/marcorax/Documents/Repositories/P_Pathway/OUT spiking/Matlab Out/' ;
-load([FramesFolder 'Moving BarFramesL.mat']); %Loading FrameL matrices
-load([FramesFolder 'Moving BarFramesR.mat']); %Loading FrameR matrices
-load([SpikesFolder 'Frametime.mat']); %Loading timeL and timeR arrays
-load([SpikesFolder 'Stereo_Out_On.mat']);
-load([SpikesFolder 'Stereo_Out_Off.mat']);
+
+Dataset = '/Moving_Bar';
+FramesFolder = '../Data/Extracted_Frames';
+SpikesFolder = '../Data/Parvo_Population_Data' ;
+load([FramesFolder Dataset '/FramesL.mat']); %Loading FrameL matrices
+load([FramesFolder Dataset '/FramesR.mat']); %Loading FrameR matrices
+load([FramesFolder Dataset '/Frametime.mat']); %Loading timeL and timeR arrays
+load([SpikesFolder '/Input_On_' Dataset(2:end) '.mat']);
+load([SpikesFolder '/Input_Off_' Dataset(2:end) '.mat']);
 
 OnPop = {OnPop0,OnPop1,OnPop2,OnPop3,OnPop4,OnPop5,OnPop6,OnPop7};
 OnPopt = {OnPop0t,OnPop1t,OnPop2t,OnPop3t,OnPop4t,OnPop5t,OnPop6t,OnPop7t};
@@ -34,79 +39,73 @@ toc
 
 %% Picking up a frame + visualization 
 iframe = 93;                                    
-% f = figure;
-% p = uipanel('Parent',f,'BorderType','none'); 
-% p.Title = 'Surfaces by M Path'; 
-% p.TitlePosition = 'centertop'; 
-% p.FontSize = 12;
-% p.FontWeight = 'bold';
+figure('Name','Surfaces by M Path','NumberTitle','off')
 imgL = FramesL{iframe};
 imgR = FramesR{iframe};
 [xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
-% %%%Left Image
-% subplot(2,2,1,'Parent',p)
-% colormap(gca,gray(65536)); image(imgL); hold on;
-% pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
-% %adding firing cells
-% plot(ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2,...
-% ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2,'mo')
-% rectangle('Position',pos,'EdgeColor','r')
-% title('Left Frame')
-% hold off
-% 
-% %%%Right Image
-% subplot(2,2,2,'Parent',p) 
-% colormap(gca,gray(65536)); image(imgR); hold on;
-% pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
-% %adding estimations
-% xEstim = F_h{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
-% yEstim = F_v{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
-% xEstim = xEstim + ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2;
-% yEstim = yEstim + ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2;
-% plot(xEstim,yEstim,'bo')
-% rectangle('Position',pos,'EdgeColor','r')
-% title('Right Frame')
-% hold off;
-% 
-% %%%Horizontal Disparity surface
-% subplot(2,2,3,'Parent',p) 
-% plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-%     ,ScatterPerimeter{iframe}(:,3),'mo')
-% colormap(gca,'default')
-% colorbar();
-% hold on
-% h_surface = F_h{iframe}(xq,yq);
-% %h_surface = imfilter(h_surface,h);
-% mesh(xq,yq,h_surface)
-% ax = gca;
-% ax.YDir = 'reverse';
-% axis([-20 60 0 80 -20 20])
-% title('M Surface Stream(Horizontal disparity)')
-% %legend('Sample Points','Interpolated Surface','Location','NorthWest')
-% hold off
-% 
-% %%%Vertical Disparity surface
-% subplot(2,2,4,'Parent',p) 
-% plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-%     ,ScatterPerimeter{iframe}(:,4),'mo')
-% colormap(gca,'default')
-% colorbar;
-% hold on
-% v_surface = F_v{iframe}(xq,yq);
-% %v_surface = imfilter(v_surface,h);
-% mesh(xq,yq,F_v{iframe}(xq,yq))
-% ax = gca;
-% ax.YDir = 'reverse';
-% axis([-20 60 0 80 -20 20])
-% title('M Surface Stream(Vertical disparity)')
-% %legend('Sample Points','Interpolated Surface','Location','NorthWest')
-% hold off
+%%%Left Image
+colormap(gray(65536)); image(imgL); hold on;
+pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
+%adding firing cells
+plot(ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2,...
+ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2,'mo')
+rectangle('Position',pos,'EdgeColor','r')
+title('Left Frame')
+hold off
+
+%%%Right Image
+figure('Name','Surfaces by M Path','NumberTitle','off')
+colormap(gray(65536)); image(imgR); hold on;
+pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
+%adding estimations
+xEstim = F_h{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
+yEstim = F_v{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
+xEstim = xEstim + ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2;
+yEstim = yEstim + ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2;
+plot(xEstim,yEstim,'bo')
+rectangle('Position',pos,'EdgeColor','r')
+title('Right Frame')
+hold off;
+
+%%%Horizontal Disparity surface
+figure('Name','Surfaces by M Path','NumberTitle','off')
+plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
+    ,ScatterPerimeter{iframe}(:,3),'mo')
+colormap('default')
+colorbar();
+hold on
+h_surface = F_h{iframe}(xq,yq);
+%h_surface = imfilter(h_surface,h);
+mesh(xq,yq,h_surface)
+ax = gca;
+ax.YDir = 'reverse';
+axis([-20 60 0 80 -20 20])
+title('M Surface Stream(Horizontal disparity)')
+%legend('Sample Points','Interpolated Surface','Location','NorthWest')
+hold off
+
+%%%Vertical Disparity surface
+figure('Name','Surfaces by M Path','NumberTitle','off')
+plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
+    ,ScatterPerimeter{iframe}(:,4),'mo')
+colormap('default')
+colorbar;
+hold on
+v_surface = F_v{iframe}(xq,yq);
+%v_surface = imfilter(v_surface,h);
+mesh(xq,yq,F_v{iframe}(xq,yq))
+ax = gca;
+ax.YDir = 'reverse';
+axis([-20 60 0 80 -20 20])
+title('M Surface Stream(Vertical disparity)')
+%legend('Sample Points','Interpolated Surface','Location','NorthWest')
+hold off
 
 x_disparity = F_h{iframe}(xq,yq);
 y_disparity = F_v{iframe}(xq,yq);
 %% Image morhping
- x_disparity=medfilt2(x_disparity);
- y_disparity=medfilt2(y_disparity);
+x_disparity=medfilt2(x_disparity);
+y_disparity=medfilt2(y_disparity);
  
 x_disparity(isnan(x_disparity))=0;
 y_disparity(isnan(y_disparity))=0;
@@ -225,18 +224,11 @@ FineMorphImgR=imgR;
 
 
 %% Final results plots
-f = figure;
-p = uipanel('Parent',f,'BorderType','none'); 
-p.Title = 'Surfaces extraction and refining'; 
-p.TitlePosition = 'centertop'; 
-p.FontSize = 12;
-p.FontWeight = 'bold';
 
 
 %%%Left Image
-ax1 = subplot(3,2,1,'Parent',p);
+figure('Name','Surfaces extraction and refining','NumberTitle','off')
 colormap(gray(65536));
-free
 image(FramesL{iframe}); hold on;
 pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
 %adding firing cells
@@ -247,8 +239,8 @@ title('Left Frame')
 hold off
 
 %%%Right Image
-ax2 = subplot(3,2,2,'Parent',p); 
-colormap(ax2, gray(65536)); image(FramesR{iframe}); hold on;
+figure('Name','Surfaces extraction and refining','NumberTitle','off')
+colormap(gray(65536)); image(FramesR{iframe}); hold on;
 pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
 %adding estimations
 xEstim = F_h{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
@@ -261,10 +253,10 @@ title('Right Frame')
 hold off;
 
 %%%Horizontal Coarse Disparity surface
-ax3 = subplot(3,2,3,'Parent',p); 
+figure('Name','Surfaces extraction and refining','NumberTitle','off')
 plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
     ,ScatterPerimeter{iframe}(:,3),'mo')
-colormap(ax3,'default')
+colormap('default')
 colorbar();
 hold on
 [xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
@@ -278,10 +270,10 @@ title('M Surface Stream(Horizontal disparity)')
 hold off
 
 %%%Vertical Coarse Disparity surface
-ax4 = subplot(3,2,4,'Parent',p); 
+figure('Name','Surfaces extraction and refining','NumberTitle','off')
 plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
     ,ScatterPerimeter{iframe}(:,4),'mo')
-colormap(ax4,'default')
+colormap('default')
 colorbar;
 hold on
 [xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
@@ -296,10 +288,10 @@ hold off
 
 
 %%%Horizontal Refined Disparity surface
-ax5 = subplot(3,2,5,'Parent',p); 
+figure('Name','Surfaces extraction and refining','NumberTitle','off')
 plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
     ,ScatterPerimeter{iframe}(:,3),'mo')
-colormap(ax5,'default')
+colormap('default')
 colorbar();
 hold on
 [xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
@@ -311,10 +303,10 @@ title('Refined (Horizontal disparity)')
 hold off
 
 %%%Vertical Refined Disparity surface
-ax6 = subplot(3,2,6,'Parent',p); 
+figure('Name','Surfaces extraction and refining','NumberTitle','off')
 plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
     ,ScatterPerimeter{iframe}(:,4),'mo')
-colormap(ax6,'default')
+colormap('default')
 colorbar;
 hold on
 [xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
@@ -328,27 +320,19 @@ hold off
 
 
 
-
-f = figure;
-p = uipanel('Parent',f,'BorderType','none'); 
-p.Title = 'Morphing results'; 
-p.TitlePosition = 'centertop'; 
-p.FontSize = 12;
-p.FontWeight = 'bold';
-
 %%%Left Original Image
-subplot(3,3,1,'Parent',p)
-colormap(gca,gray(65536)); image(OriginalImgL); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap(gray(65536)); image(OriginalImgL); hold on;
 title('Left original image'); hold off;
 
 %%%Right Original Image
-subplot(3,3,2,'Parent',p)
-colormap(gca,gray(65536)); image(OriginalImgR); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap(gray(65536)); image(OriginalImgR); hold on;
 title('Right original image'); hold off;
 
 %%%Difference
-subplot(3,3,3,'Parent',p)
-colormap(gca,'default'); mesh(xq,yq,(double(OriginalImgR)-double(OriginalImgL))/2^16); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap('default'); mesh(xq,yq,(double(OriginalImgR)-double(OriginalImgL))/2^16); hold on;
 colorbar; caxis([-0.5,0.5]);
 title('Difference between frames'); hold off;
 corrMax=sum(sum(double(OriginalImgR).*double(OriginalImgR)));
@@ -356,36 +340,26 @@ OriginalCorr = sum(sum(double(OriginalImgL(20:60,12:30)).*double(OriginalImgR(20
 OriginalDiff = sum(sum(abs(double(OriginalImgR(20:60,12:30))-double(OriginalImgL(20:60,12:30)))))
 
 %%%Left coarse-morphed Image
-subplot(3,3,4,'Parent',p)
-colormap(gca,gray(65536)); image(CoarseMorphImgL); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap(gray(65536)); image(CoarseMorphImgL); hold on;
 title('Left coarse-morphed image'); hold off;
 
-%%%Right coarse-morphed Image
-subplot(3,3,5,'Parent',p)
-colormap(gca,gray(65536)); image(CoarseMorphImgR); hold on;
-title('Right original image'); hold off;
-
 %%%Difference
-subplot(3,3,6,'Parent',p)
-colormap(gca,'default'); mesh(xq,yq,(double(CoarseMorphImgR)-double(CoarseMorphImgL))/2^16); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap('default'); mesh(xq,yq,(double(CoarseMorphImgR)-double(CoarseMorphImgL))/2^16); hold on;
 colorbar; caxis([-0.5,0.5]);
 title('Difference between frames'); hold off;
 CoarseCorr = sum(sum(double(CoarseMorphImgL(20:60,12:30)).*double(CoarseMorphImgR(20:60,12:30))))/corrMax
 CoarseDiff = sum(sum(abs(double(CoarseMorphImgR(20:60,12:30))-double(CoarseMorphImgL(20:60,12:30)))))
 
 %%%Left fine-morphed Image
-subplot(3,3,7,'Parent',p)
-colormap(gca,gray(65536)); image(FineMorphImgL); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap(gray(65536)); image(FineMorphImgL); hold on;
 title('Left fine-morphed image'); hold off;
 
-%%%Right fine-morphed Image
-subplot(3,3,8,'Parent',p)
-colormap(gca,gray(65536)); image(FineMorphImgR); hold on;
-title('Right original image'); hold off;
-
 %%%Difference
-subplot(3,3,9,'Parent',p); 
-colormap(gca,'default'); mesh(xq,yq,(double(FineMorphImgR)-double(FineMorphImgL))/2^16); hold on;
+figure('Name','Morphing results','NumberTitle','off')
+colormap('default'); mesh(xq,yq,(double(FineMorphImgR)-double(FineMorphImgL))/2^16); hold on;
 colorbar;caxis([-0.5,0.5]);
 title('Difference between frame'); hold off;
 FineCorr = sum(sum(double(FineMorphImgL(20:60,12:30)).*double(FineMorphImgR(20:60,12:30))))/corrMax
