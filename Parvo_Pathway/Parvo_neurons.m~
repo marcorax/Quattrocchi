@@ -8,13 +8,11 @@ addpath Filters
 
 %Settings and Data
 
-NOrient=8; % number of oriented cells, FIXED the use of pre computed linear
-           % filters to compute the gabor parvo cells.
+NOrient=8; % number of oriented cells FIXED by pre computed linear filters
            % Note that this number CANNOT differ from the same paramater set 
-           % for the Magno simple neurons, therefore before computing the M
-           % pathway check if it is = 8, in future works this limitation might
-           % be removed, thus the code in the magno path is written to accept
-           % any number of orientations while being fixed on 8 
+           % for the Magno simple neurons, even thought I am assuming
+           % that the total number of orientation selective populations
+           % is consistent across pathways
            
 timeOffs=0.001; % The two pathways need to exchange information when they 
                 % are temporally sinchronised, thus i compute disparity 
@@ -55,11 +53,9 @@ shrinkdFramesL = shrinkdFramesL((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2
                                 (xRes/2)-(xInputSize/2)+1:(xRes/2)+(xInputSize/2),:);
 shrinkdFramesR = shrinkdFramesR((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2),...
                                 (xRes/2)-(xInputSize/2)+1:(xRes/2)+(xInputSize/2),:);
-
 %% P_Pathway segmentation
-tic;
-segmentate(shrinkdFramesL, shrinkdFramesR, OnPop, OnPopt, OffPop, OffPopt, timeL, timeOffs, NOrient)
-toc;
+
+
 %% M_Surface 
 % Computing the disparity surfaces with information coming from the m
 % pathway.

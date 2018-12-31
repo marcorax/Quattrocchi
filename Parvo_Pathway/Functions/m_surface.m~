@@ -19,10 +19,13 @@ parfor k = 1:length(timeL)
         
         tmpPosOn = cat(1,tmpPosOn,OnPop{kk}(tmpIndOn,:));
         tmpPosOff = cat(1,tmpPosOff,OffPop{kk}(tmpIndOff,:));
+        
     end
     %Putting On and Off together
     tmpPos = cat(1,tmpPosOn,tmpPosOff);
-    %tmpPos = tmpPosOn; using a single population for debugging    
+    %tmpPos = tmpPosOn; using a single population for debugging
+    
+
 
     [UnLCenters,~,LI] = unique(tmpPos(:,1:2),'rows');
     %getting only the most firing half of the population
@@ -57,8 +60,8 @@ parfor k = 1:length(timeL)
         y = double(result{1}(:,2));
         z_h = result{2}(:,1);
         z_v = result{2}(:,2);
-        Surface_horizontal{k} = scatteredInterpolant(x,y,z_h, 'linear', borders);
-        Surface_vertical{k} = scatteredInterpolant(x,y,z_v, 'linear', borders);
+        Surface_horizontal{k} = scatteredInterpolant(x,y,z_h,'linear', borders);
+        Surface_vertical{k} = scatteredInterpolant(x,y,z_v,'linear', borders);
         ScatterPerimeter{k} = [x,y,z_h,z_v];
     end
 end

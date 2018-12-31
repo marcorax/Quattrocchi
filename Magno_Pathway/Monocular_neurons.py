@@ -97,7 +97,16 @@ total_num_neurons = num_neurons_sub_pop*num_orientations
 #%% Net Parameters - Artifiial Stimuli
 #run this only if you want to load and run artificial stimuli
 
-num_orientations = 8 # number of subpopulations of neurons sensitive to orientations
+num_orientations = 8 # Number of subpopulations of neurons sensitive to orientations,
+		     # it needs to be FIXED to 8 by the pre computed linear filters in the P_patway
+   		     # Note that this number CANNOT differ from the same paramater set 
+   		     # for the Parvo neurons, therefore before start computing the M
+          	     # pathway check if is = 8. Also note that in future works this limitation might be
+                     # removed, thus the code in the magno path is written to accept
+                     # any number of orientation while should fixed on 8 as written if you are planning 
+		     # to run the P_pathway afterwards 
+		      
+
 theta=np.linspace(0., (7/8)*np.pi, num=num_orientations) # Orientation angle array,
                                                          # defining the angle which each subpopulation
                                                          # will be sensitive to 
