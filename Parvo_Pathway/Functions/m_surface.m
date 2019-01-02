@@ -1,12 +1,22 @@
-function [Surface_horizontal, Surface_vertical,ScatterPerimeter] = m_surface(OnPop, OnPopt,...
-                                    OffPop, OffPopt, timeL, timeOffs, NOrient, spkThr, borders)
+%% m_surface
+% Function decoding and interpolating disparity out of magno neuron
+% activity, the interpolation is then segmented using the result of a
+% previous segmentation algorithm.
 
-Surface_horizontal = cell(length(timeL)); % Cells of horizontal disparity interpolants
-Surface_vertical = cell(length(timeL));  % Cells of vertical disparity interpolants
+function [Surface_horizontal, Surface_vertical, ScatterPerimeter] = m_surface(...
+                                    OnPop, OnPopt, OffPop, OffPopt, timeL,...
+                                    timeOffs, NOrient, spkThr, borders, seg_frames_l)
 
-ScatterPerimeter = cell(length(timeL));
+Surface_horizontal = cell(length(timeL),1); % Cells of horizontal disparity interpolants
+Surface_vertical = cell(length(timeL),1);  % Cells of vertical disparity interpolants
+ScatterPerimeter = cell(length(timeL),1);
 
-parfor k = 1:length(timeL)
+% Building the mesh grid that will be used to deal with the final results
+inputsize = size(seg_frames_l{1});
+[xq,yq]=meshgrid(1:inputsize(2),1:inputsize(1));
+
+
+for k = 1:length(timeL)
     tmpPosOn = [];
     tmpPosOff = [];
     for kk=1:NOrient
@@ -57,8 +67,18 @@ parfor k = 1:length(timeL)
         y = double(result{1}(:,2));
         z_h = result{2}(:,1);
         z_v = result{2}(:,2);
-        Surface_horizontal{k} = scatteredInterpolant(x,y,z_h, 'linear', borders);
-        Surface_vertical{k} = scatteredInterpolant(x,y,z_v, 'linear', borders);
+        interpolant_h = scatteredInterpolant(x,y,z_h, 'linear', borders);
+        interpolant_v = scatteredInterpolant(x,y,z_v, 'linear', borders);
+        % If the interpolants have enough points, build the surface as a 
+        % 2D matrix and remove values for the background.
+        Surface_horizontal{k} = interpolant_h(xq,yq);
+        if (size(Surface_horizontal{k})==inputsize)
+            Surface_horizontal{k} = Surface_horizontal{k}.*seg_frames_l{k};
+        end
+        Surface_vertical{k} = interpolant_v(xq,yq);
+        if (size(Surface_vertical{k})==inputsize)
+             Surface_vertical{k} = Surface_vertical{k}.*seg_frames_l{k};
+        end
         ScatterPerimeter{k} = [x,y,z_h,z_v];
     end
 end

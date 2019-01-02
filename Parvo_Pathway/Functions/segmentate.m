@@ -5,18 +5,14 @@
 % The function is based on the active contours function where the contour
 % is defined by the active disparity neurons coming from the Magno Pathway
 
-function [seg_frames_l, seg_frames_r]=segmentate(FramesL, FramesR, OnPop,...
-                                            OnPopt, OffPop, OffPopt,...
-                                            timeL, timeOffs, NOrient)
-% Number of iteration of the filling algorithm.
-nIterations = 300;
-seg_frames_l = cell(length(FramesL)); % Cells that will contain the segmented left frames 
-seg_frames_r = cell(length(FramesR)); % Cells that will contain the segmented right frames 
+function [seg_frames]=segmentate(Frames, OnPop, OnPopt, OffPop, OffPopt,...
+                                                timeL, timeOffs, NOrient,...
+                                                nIterations, bord_thick)
 
-    %parfor k = 1:length(FramesL)
-    for k = 1:length(FramesL)
-        framel= squeeze(FramesL(:,:,k));
-        framer= squeeze(FramesR(:,:,k));
+seg_frames = cell(length(Frames),1); % Cells that will contain the segmented left frames 
+
+    parfor k = 1:length(Frames)
+        frame= squeeze(Frames(:,:,k));
         tmpPosOn = [];
         tmpPosOff = [];
         for kk=1:NOrient
@@ -37,21 +33,26 @@ seg_frames_r = cell(length(FramesR)); % Cells that will contain the segmented ri
         % for the active contours techinique
        
         % Centers for the left frame
-        [UnLCenters,~,~] = unique(tmpPos(:,1:2),'rows');
+        [UnCenters,~,~] = unique(tmpPos(:,1:2),'rows');
         
-        % Centers for the right frame
-        [UnRCenters,~,~] = unique(tmpPos(:,3:4),'rows');
+        mask = zeros(size(frame));
         
-        maskL = zeros(size(framel));
-        maskR = zeros(size(framer));
+        % In matlab I need to use 1D indeces to access a predefined list of
+        % point in a matrix
+        Index=sub2ind(size(frame),UnCenters(:,2),UnCenters(:,1));
         
-        maskL(UnLCenters) = 1;
-        maskR(UnRCenters) = 1;
-        % C'è un bug nella segmentazione, controlla che i centri siano
-        % giusti
-        tmpRes=activecontour(FramesL, maskL, nIterations);
-        tmpRes=activecontour(FramesR, maskR, nIterations);
-    
+        % Maximum brightness value for a 16 bit unsigned value (The same
+        % of the sensor used: DAVIS240)
+        mask(Index) = 1;
+        
+        if(bord_thick~=1)
+            % Increase the size of the mask borders
+            mask = logical(conv2(mask, ones(bord_thick), 'same'));
+        end
+        
+        seg_frames{k,1}=double(activecontour(frame, mask, nIterations));
+        % putting zeros to NaN
+        seg_frames{k,1}(seg_frames{k,1} == 0) = NaN;
     end
 
 end
