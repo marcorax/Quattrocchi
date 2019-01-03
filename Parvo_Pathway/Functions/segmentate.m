@@ -9,7 +9,7 @@ function [seg_frames]=segmentate(Frames, OnPop, OnPopt, OffPop, OffPopt,...
                                                 timeL, timeOffs, NOrient,...
                                                 nIterations, bord_thick)
 
-seg_frames = cell(length(Frames),1); % Cells that will contain the segmented left frames 
+seg_frames = zeros(size(Frames)); % Cells that will contain the segmented left frames 
 
     parfor k = 1:length(Frames)
         frame= squeeze(Frames(:,:,k));
@@ -50,9 +50,10 @@ seg_frames = cell(length(Frames),1); % Cells that will contain the segmented lef
             mask = logical(conv2(mask, ones(bord_thick), 'same'));
         end
         
-        seg_frames{k,1}=double(activecontour(frame, mask, nIterations));
+        tmp_seg_frame=double(activecontour(frame, mask, nIterations));
         % putting zeros to NaN
-        seg_frames{k,1}(seg_frames{k,1} == 0) = NaN;
+        tmp_seg_frame(tmp_seg_frame == 0)= NaN;
+        seg_frames(:,:,k) = tmp_seg_frame;
     end
 
 end

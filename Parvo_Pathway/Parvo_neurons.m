@@ -50,11 +50,11 @@ timeR = double(timeR)/1000000;
 
 % I concatenate the Frames and resize them to focus the computation only 
 % within the borders defined with xInputSize and yInputSize
-shrinkdFramesL = cat(3,FramesL{:});
-shrinkdFramesR = cat(3,FramesR{:});
-shrinkdFramesL = shrinkdFramesL((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2),...
+cutFramesL = cat(3,FramesL{:});
+cutFramesR = cat(3,FramesR{:});
+cutFramesL = cutFramesL((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2),...
                                 (xRes/2)-(xInputSize/2)+1:(xRes/2)+(xInputSize/2),:);
-shrinkdFramesR = shrinkdFramesR((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2),...
+cutFramesR = cutFramesR((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2),...
                                 (xRes/2)-(xInputSize/2)+1:(xRes/2)+(xInputSize/2),:);
 
 %% P_Pathway segmentation
@@ -70,9 +70,10 @@ nIterations = 50;
 bord_thick = 2;
 
 tic;
-[seg_frames_l] = segmentate(shrinkdFramesL, OnPop, OnPopt, OffPop, OffPopt,...
+[seg_frames_l] = segmentate(cutFramesL, OnPop, OnPopt, OffPop, OffPopt,...
                             timeL, timeOffs, NOrient, nIterations, bord_thick);
 toc;
+
 %% M_Surface 
 % Computing the disparity surfaces with information coming from the m_pathway.
 % This solution is obtained decoding disparity from the magno cells
@@ -95,6 +96,39 @@ borders='linear';
 toc
 
 
+
+
+
+%% Parvo population disparity computation and refining
+
+% Polpulation settings
+n_scales = 1;           % NUMBER OF SCALE - SET ON IMAGE SIZE AND DISPARITY CONTENT: max scale number n_scale, so that (minimum image size) / (2^n_scale) > (2*filter_size)
+                        %                                                            max disparity decoded = +/- [2^n_scales /(4*0.063)]
+energy_th = 2.2e-5;     % ENERGY THRESHOLD - SET ON DISPARITY RESULT
+n_filters = 8;          % FIXED (To remember that the number cannot be set)
+ori_thr = 0;            % FIXED
+
+% Receptive field sizes (Select by commenting the unwanted one)
+% FILTER 11x11 
+ph_shift_file='FILTERS/ph_shift_PH7_F0.25.mat';
+filter_file='FILTERS/Gt11B0.0833f0.25.mat';
+% % FILTER 43x43
+% filter='FILTERS/Gt43B0.0208f0.063.mat';
+% ph_shift='FILTERS/ph_shift_PH7_F0.063.mat';
+
+
+tic;
+
+% CONVERSION TO DOUBLE
+II=cat(4,double(cutFramesL),double(cutFramesR));
+coarse_disp=cat(4,Coarse_h_disparity,Coarse_v_disparity);
+Out = P_Disparity(II,coarse_disp,energy_th,ori_thr,ph_shift_file,filter_file);    
+
+%Out((isnan(Out)))=0;
+
+%save Out %% � il vettore delle disparit� ha 2 mappe per i valori x e y 
+% permette quindi di ottenere un vettore risultante delle disparit�
+toc;
 
 %% Picking up a frame + visualization 
 iframe = 93;                                    
@@ -202,45 +236,6 @@ CoarseMorphImgL=imgL;
 CoarseMorphImgR=imgR;
 
 
-
-%% DISPARITY COMPUTATION
-%  POPULATION INIT
-n_scales = 1;           % NUMBER OF SCALE - SET ON IMAGE SIZE AND DISPARITY CONTENT: max scale number n_scale, so that (minimum image size) / (2^n_scale) > (2*filter_size)
-                        %                                                            max disparity decoded = +/- [2^n_scales /(4*0.063)]
-energy_th = 2.2e-5;     % ENERGY THRESHOLD - SET ON DISPARITY RESULT
-n_filters = 8;          % FIXED
-ori_thr = 0;            % FIXED
-
-% FILTER 11x11
-ph_shift_file='FILTERS/ph_shift_PH7_F0.25.mat';
-filter_file='FILTERS/Gt11B0.0833f0.25.mat';
-% % FILTER 43x43
-% filter='FILTERS/Gt43B0.0208f0.063.mat';
-% ph_shift='FILTERS/ph_shift_PH7_F0.063.mat';
-
-
-tic;
-    % CONVERSION TO DOUBLE
-    II=cat(3,double(imgL),double(imgR));
-    
-    % POPULATION CODE
-%     I=round(rand([250,400+15]));
-%     II=I(:,1:400);
-%     II(:,:,2)=I(:,16:end);
-    Out = ctf_pop_disparity(II,n_scales,n_filters,energy_th,ori_thr,ph_shift_file,filter_file);
-    
-%     figure,imagesc(Out(:,:,1)); hold on;
-%     set(gca,'clim',[-20 20]);
-%     title(energy_th);
-%     colorbar;
-%     %rectangle('Position',pos,'EdgeColor','r')
-%     hold off;
-
-Out((isnan(Out)))=0;
-
-%save Out %% � il vettore delle disparit� ha 2 mappe per i valori x e y 
-% permette quindi di ottenere un vettore risultante delle disparit�
-toc
 %% Result of the combination
 h = ones(3,3)/9;
 Out(:,:,1) = imfilter(Out(:,:,1),h);

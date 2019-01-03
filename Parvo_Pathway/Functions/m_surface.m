@@ -7,16 +7,16 @@ function [Surface_horizontal, Surface_vertical, ScatterPerimeter] = m_surface(..
                                     OnPop, OnPopt, OffPop, OffPopt, timeL,...
                                     timeOffs, NOrient, spkThr, borders, seg_frames_l)
 
-Surface_horizontal = cell(length(timeL),1); % Cells of horizontal disparity interpolants
-Surface_vertical = cell(length(timeL),1);  % Cells of vertical disparity interpolants
+Surface_horizontal = zeros(size(seg_frames_l)); % Cells of horizontal disparity interpolants
+Surface_vertical = zeros(size(seg_frames_l));  % Cells of vertical disparity interpolants
 ScatterPerimeter = cell(length(timeL),1);
 
 % Building the mesh grid that will be used to deal with the final results
-inputsize = size(seg_frames_l{1});
+inputsize = size(seg_frames_l);
 [xq,yq]=meshgrid(1:inputsize(2),1:inputsize(1));
 
 
-for k = 1:length(timeL)
+parfor k = 1:length(timeL)
     tmpPosOn = [];
     tmpPosOff = [];
     for kk=1:NOrient
@@ -58,11 +58,11 @@ for k = 1:length(timeL)
             result{2,1}=cat(1,result{2,1},tmpDisparities);
         end
     end
+    % More than 2 non collinear points are needed to infer a surface in 3D, 
+    % thus skip computation if less than 3 neurons are responding
     if isempty(result{1,1})
-        Surface_horizontal{k}=[];
-        Surface_vertical{k}=[];
         ScatterPerimeter{k}=[];
-    else
+    elseif(length(result{1,1}(:,1))>=3 && length(unique(result{1,1}(:,1)))~=1 && length(unique(result{1,1}(:,2)))~=1)
         x = double(result{1}(:,1)); 
         y = double(result{1}(:,2));
         z_h = result{2}(:,1);
@@ -71,15 +71,13 @@ for k = 1:length(timeL)
         interpolant_v = scatteredInterpolant(x,y,z_v, 'linear', borders);
         % If the interpolants have enough points, build the surface as a 
         % 2D matrix and remove values for the background.
-        Surface_horizontal{k} = interpolant_h(xq,yq);
-        if (size(Surface_horizontal{k})==inputsize)
-            Surface_horizontal{k} = Surface_horizontal{k}.*seg_frames_l{k};
-        end
-        Surface_vertical{k} = interpolant_v(xq,yq);
-        if (size(Surface_vertical{k})==inputsize)
-             Surface_vertical{k} = Surface_vertical{k}.*seg_frames_l{k};
-        end
+        Surface_horizontal(:,:,k) = interpolant_h(xq,yq);
+        Surface_vertical(:,:,k) = interpolant_v(xq,yq);
+        Surface_horizontal(:,:,k) = Surface_horizontal(:,:,k).*seg_frames_l(:,:,k);
+        Surface_vertical(:,:,k) = Surface_vertical(:,:,k).*seg_frames_l(:,:,k);
         ScatterPerimeter{k} = [x,y,z_h,z_v];
+    else % The result is not empty but it has less than 3 points, then skip
+        ScatterPerimeter{k}=[];
     end
 end
 end

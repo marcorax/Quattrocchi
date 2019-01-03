@@ -1,178 +1,33 @@
-function D = P_Disparity(II,n_orient,energy_thr,ori_thr,ph_shift_file,filter_file)
+function D = P_Disparity(II,coarse_disp,energy_thr,ori_thr,ph_shift_file,filter_file)
 
-%%%%%%%%%%%
-% Level 1 %
-%%%%%%%%%%%
-display('Scale #: 1');
+% TODO, use the convolution on the segmented part of the image
+% Compute disparity refining with gabor filter 
+[FI,~] = filt_gabor(II,coarse_disp,filter_file);
 
-% TODO modify filt_steer_or_gabor to accept position shift 
-% COMPUTE GABOR FILTERING ON COARSER SCALE (REAL AND IMAG PART)
-[F] = filt_steer_or_gabor(II, filter_file);
+% TODO modify the code to accept position shift 
+% Compute phase shift
+G{1,1}=FI{1}(:,:,:,1); G{1,2}=FI{2}(:,:,:,1);
+G(2,:)=shift_in_phase(FI{1}(:,:,:,2),FI{2}(:,:,:,2),ph_shift_file);
+clear FI
 
-% COMPUTE PHASE SHIFT ON COARSER SCALE
-G{1,1}=F{1}(:,:,:,1); G{1,2}=F{2}(:,:,:,1);
-G(2,:)=shift_in_phase(F{1}(:,:,:,2),F{2}(:,:,:,2),ph_shift_file);
-clear F
-
-% PLOT FILTER SHAPE (uncomment to use it)
+% Plot Filter shape (uncomment to use it)
 % plot_filter(G)
 
-% POPULATION DECODING
+% Population decoding
 D = population(G,energy_thr,ori_thr,ph_shift_file);
 
-% MASK UNRELIABLE VALUE
+% Mask unreliable values
 invalid = isnan(D);
+D(invalid) = NaN;
 
 clear E G
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Coarse-to-fine Estimation and Merging %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-for scale = 2:n_scales
-    
-    display(['Scale #: ' num2str(scale)]);
-    
-    % EXPAND DISPARITY OF PREVIOUS SCALE
-    D = expand(D.*2);    
-
-    % COMPUTE GABOR FILTERING ON CURRENT SCALE (REAL AND IMAG PART)
-    [F] = filt_steer_or_gabor(II{scale},filter_file);
-   
-    % COMPUTE PHASE SHIFT ON CURRENT SCALE
-    G{1,1}=F{1}(:,:,:,1); G{1,2}=F{2}(:,:,:,1);
-    G(2,:)=shift_in_phase(F{1}(:,:,:,2),F{2}(:,:,:,2),ph_shift_file);
-    clear F
-    
-    % WARP POPULATION RESPONSE ACCORDING TO DISPARITY OF PREVIOUS SCALE
-    G = warp_sequence(G,D);
-  
-    % POPULATION DECODING
-    Ds = population(G,energy_thr,ori_thr,ph_shift_file);
-
-    % MERGE DISPARITY OF PREVIOUS AND CURRENT SCALE
-    D = merge_disparity(D,Ds);
-    
-    % MASK UNRELIABLE VALUES
-    invalid = isnan(Ds);
-    
-    clear G E
-end
-
-% MASK UNRELIABLE VALUE
-D(invalid) = NaN;
  
- 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% REMOVE PADDING FOR PYRAMID %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-D(end-(sy2-sy1-1):end,:,:) = [];
-D(:,end-(sx2-sx1-1):end,:) = [];
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-function [II,x_pix,y_pix] = image_pyramid(II,n_scales)
-
-
-[sy, sx, dummy] = size(II);
-
-x_pix = cell(1,n_scales);
-y_pix = cell(1,n_scales);
-
-[ x_pix{n_scales}, y_pix{n_scales} ] = meshgrid(1:sx,1:sy);
-
-
-lpf = [1 4 6 4 1]/16;
-
-tmp = II;
-II = cell(1,n_scales);
-II{n_scales} = tmp;
-
-for scale = n_scales-1:-1:1
-    for frame = 1:2
-        tmp(:,:,frame) = conv2b(conv2b(tmp(:,:,frame),lpf,3),lpf',3);
-    end
-    [Ny, Nx, dummy] = size(tmp);
-
-    tmp = tmp(1:2:Ny,1:2:Nx,:);
-    II{scale} = tmp;
-    x_pix{scale} = x_pix{scale+1}(1:2:Ny,1:2:Nx);
-    y_pix{scale} = y_pix{scale+1}(1:2:Ny,1:2:Nx);
-end
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function D = expand(D)
-sy = size(D,1);
-sx = size(D,2);
-
-[X, Y] = meshgrid(1:(sx-1)/(2*sx-1):sx, ...
-    1:(sy-1)/(2*sy-1):sy);
-
-D = bilin_interp(D,X,Y);
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-function [G]= warp_sequence(G,D)
-
-[sy, sx, n_orient, phase_num, re_im] = size(G{2});
-
-[X Y] = meshgrid(1:sx,1:sy);
-clear sy sx n_orient phase_num re_im;
-
-D(isnan(D)) = 0;
-
-%% SLOW
-G{2,1} = bilin_interp_orig(double(G{2,1}), X-D(:,:,1), Y-D(:,:,2));
-G{2,2} = bilin_interp_orig(double(G{2,2}), X-D(:,:,1), Y-D(:,:,2));
-%% FAST
-% G{1,1} = bilin_interp_orig_mex(double(G{1,1}), X+D(:,:,1), Y+D(:,:,2));
-% G{1,2} = bilin_interp_orig_mex(double(G{1,2}), X+D(:,:,1), Y+D(:,:,2));
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-function D = merge_disparity(D1,D2)
-
-
-invalid1 = isnan(D1);
-invalid2 = isnan(D2);
-
-D1(invalid1) = 0;
-D2(invalid2) = 0;
-
-invalid = invalid1 & invalid2;
-
-% invalid = invalid1; % If unreliable at lower res, do not reattempt at
-% higher res (reliability measure not suited for
-% this). Low res valid estimates are retained even if
-% they are never refined.
-
-D = D1 + D2;
-D(invalid) = NaN;
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function D = population(G,energy_thr,ori_thr,ph_shift_file,scale)
+function D = population(G,energy_thr,ori_thr,ph_shift_file)
 
 
 [sy, sx, n_orient, phase_num, re_im] = size(G{2});
@@ -246,7 +101,7 @@ Dori = sum(permute(repmat(disp1,[sy 1 sx n_orient]),[1 3 4 2]).*E,4)./sum(E,4);
 clear disp1;
 
 % COMPUTE X AND Y DISPARITY COMPONENTS FROM ORIENTATION COMPONENTS
-theta=([1:n_orient]-1)*pi/8;
+theta=(1:n_orient-1)*pi/8;
 theta = permute(repmat(theta,[sy 1 sx]),[1 3 2]);
 
 DX = Dori.*cos(theta);
@@ -256,7 +111,7 @@ clear E theta;
 
 
 %% INTERSECTION OF CONSTRAINT FOR VECTOR DISPARITY (GAUTAMA)
-D = repmat(NaN, [sy sx 2]);
+D = NaN([sy sx 2]);
 nc_min=3;
 
 L_2 = DX.^2+DY.^2;
