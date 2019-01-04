@@ -3,23 +3,27 @@ function D = P_Disparity(II,coarse_disp,seg_masks,energy_thr,ori_thr,ph_shift_fi
 % Compute disparity refining with gabor filter 
 [FI,~] = filt_gabor_segm(II,seg_masks,coarse_disp,filter_file);
 
-[~,~,n_frames,~]=size(II);
-D = cell(length(n_frames),1);
-parfor frame = 1:n_frames 
-    G = cell(2);
-    current_FI_real = squeeze(FI{1}(:,:,:,frame,:));
-    current_FI_imag = squeeze(FI{2}(:,:,:,frame,:));
+[~,~,n_frames,~]=shape(II);
+
+for frame = 1:n_frames
+    
+    current_FI{1,1} = squueze(FI{1}(:,:,:,frame,:));
+    current_FI{1,2} = squueze(FI{2}(:,:,:,frame,:));
 
     % Compute phase shift
-    G{1,1}=current_FI_real(:,:,:,1); G{1,2}=current_FI_imag(:,:,:,1);
-    G(2,:)=shift_in_phase(current_FI_real(:,:,:,2),current_FI_imag(:,:,:,2),ph_shift_file);
+    G{1,1}=FI{1}(:,:,:,1); G{1,2}=FI{2}(:,:,:,1);
+    G(2,:)=shift_in_phase(FI{1}(:,:,:,2),FI{2}(:,:,:,2),ph_shift_file);
+
+    % Plot Filter shape (uncomment to use it)
+    % plot_filter(G)
 
     % Population decoding
-    D{frame} = population(G,energy_thr,ori_thr,ph_shift_file);
+    D = population(G,energy_thr,ori_thr,ph_shift_file);
 
     % Mask unreliable values
-    invalid = isnan(D{frame});
-    D{frame}(invalid) = NaN;
+    invalid = isnan(D);
+    D(invalid) = NaN;
+
 end
 
 
@@ -100,7 +104,7 @@ Dori = sum(permute(repmat(disp1,[sy 1 sx n_orient]),[1 3 4 2]).*E,4)./sum(E,4);
 clear disp1;
 
 % COMPUTE X AND Y DISPARITY COMPONENTS FROM ORIENTATION COMPONENTS
-theta=(0:n_orient-1)*pi/8;
+theta=(1:n_orient-1)*pi/8;
 theta = permute(repmat(theta,[sy 1 sx]),[1 3 2]);
 
 DX = Dori.*cos(theta);

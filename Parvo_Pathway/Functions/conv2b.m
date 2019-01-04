@@ -17,15 +17,15 @@ function imf=conv2b(im, ker, border);
 
 
 % checking dimensions
-[nky nkx]=size(ker);
-if (~rem(nkx,2))|(~rem(nky,2))
+[nky, nkx]=size(ker);
+if (~rem(nkx,2))||(~rem(nky,2))
 	fprintf(1,'\n\t CONV2B WARNING: not specific handling for even sized kernels\n\n');
 end
 
 % proper treatment for each value of border
 if border==0
 	sh='same';
-elseif (border==1)|(border==2)|(border==3)
+elseif (border==1)||(border==2)||(border==3)
 	sh='valid';
 	Bx=(nkx-1)/2;
 	By=(nky-1)/2;
@@ -54,7 +54,7 @@ function imb=putborde(im,Nx,Ny,method);
 % ONG - 10/96
 %
 
-[sy sx]=size(im);
+[sy, sx]=size(im);
 imb=zeros(sy+2*Ny,sx+2*Nx);
 imb(1+Ny:sy+Ny,1+Nx:sx+Nx)=im;
 

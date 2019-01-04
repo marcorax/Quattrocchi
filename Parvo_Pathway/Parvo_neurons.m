@@ -42,9 +42,13 @@ load([SpikesFolder '/Input_Off_' Dataset(2:end) '.mat']);
 
 % On and off populations, previously computed in the Magno Pathway
 OnPop = {OnPop0,OnPop1,OnPop2,OnPop3,OnPop4,OnPop5,OnPop6,OnPop7};
+clear OnPop0 OnPop1 OnPop2 OnPop3 OnPop4 OnPop5 OnPop6 OnPop7
 OnPopt = {OnPop0t,OnPop1t,OnPop2t,OnPop3t,OnPop4t,OnPop5t,OnPop6t,OnPop7t};
+clear OnPop0t OnPop1t OnPop2t OnPop3t OnPop4t OnPop5t OnPop6t OnPop7t
 OffPop = {OffPop0,OffPop1,OffPop2,OffPop3,OffPop4,OffPop5,OffPop6,OffPop7};
+clear OffPop0 OffPop1 OffPop2 OffPop3 OffPop4 OffPop5 OffPop6 OffPop7
 OffPopt = {OffPop0t,OffPop1t,OffPop2t,OffPop3t,OffPop4t,OffPop5t,OffPop6t,OffPop7t};
+clear OffPop0t OffPop1t OffPop2t OffPop3t OffPop4t OffPop5t OffPop6t OffPop7t
 timeL = double(timeL)/1000000;
 timeR = double(timeR)/1000000;
 
@@ -60,8 +64,6 @@ cutFramesR = cutFramesR((yRes/2)-(yInputSize/2)+1:(yRes/2)+(yInputSize/2),...
 %% P_Pathway segmentation
 % To avoid errors of interpolation performed by the segment below, the
 % surfaces are segmentred with the informations extracted from the frames
-% Since the surfaces are computed with disparity in respect to the left
-% camera only the left frames will be computed.
 
 % Number of iteration of the filling algorithm.
 nIterations = 50;
@@ -70,10 +72,10 @@ nIterations = 50;
 bord_thick = 2;
 
 tic;
-[seg_frames_l] = segmentate(cutFramesL, OnPop, OnPopt, OffPop, OffPopt,...
-                            timeL, timeOffs, NOrient, nIterations, bord_thick);
-toc;
-
+[seg_frames_l,seg_frames_r] = segmentate(cutFramesL, cutFramesR, OnPop, OnPopt,...
+                            OffPop, OffPopt, timeL, timeOffs, NOrient, ...
+                            nIterations, bord_thick);
+toc
 %% M_Surface 
 % Computing the disparity surfaces with information coming from the m_pathway.
 % This solution is obtained decoding disparity from the magno cells
@@ -94,13 +96,8 @@ borders='linear';
                                         timeOffs, NOrient, spkThr, ...
                                         borders, seg_frames_l);
 toc
-
-
-
-
-
 %% Parvo population disparity computation and refining
-
+tic;
 % Polpulation settings
 n_scales = 1;           % NUMBER OF SCALE - SET ON IMAGE SIZE AND DISPARITY CONTENT: max scale number n_scale, so that (minimum image size) / (2^n_scale) > (2*filter_size)
                         %                                                            max disparity decoded = +/- [2^n_scales /(4*0.063)]
@@ -116,304 +113,25 @@ filter_file='FILTERS/Gt11B0.0833f0.25.mat';
 % filter='FILTERS/Gt43B0.0208f0.063.mat';
 % ph_shift='FILTERS/ph_shift_PH7_F0.063.mat';
 
-
-tic;
-
-% CONVERSION TO DOUBLE
+% Preparing data for P_Disparity function
 II=cat(4,double(cutFramesL),double(cutFramesR));
+mask=cat(4,seg_frames_l,seg_frames_r);
 coarse_disp=cat(4,Coarse_h_disparity,Coarse_v_disparity);
-Out = P_Disparity(II,coarse_disp,energy_th,ori_thr,ph_shift_file,filter_file);    
 
-%Out((isnan(Out)))=0;
+% Computing refined disparity
+fine_disp = P_Disparity(II,coarse_disp,mask,energy_th,ori_thr,ph_shift_file,filter_file);    
 
-%save Out %% � il vettore delle disparit� ha 2 mappe per i valori x e y 
-% permette quindi di ottenere un vettore risultante delle disparit�
-toc;
+toc
 
-%% Picking up a frame + visualization 
-iframe = 93;                                    
-figure('Name','Surfaces by M Path','NumberTitle','off')
-imgL = FramesL{iframe};
-imgR = FramesR{iframe};
-%%%Left Image
-colormap(gray(65536)); image(imgL); hold on;
-pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
-%adding firing cells
-plot(ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2,...
-ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2,'mo')
-rectangle('Position',pos,'EdgeColor','r')
-title('Left Frame')
-hold off
-
-%%%Right Image
-figure('Name','Surfaces by M Path','NumberTitle','off')
-colormap(gray(65536)); image(imgR); hold on;
-pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
-% Estimations, left disparity neurons receptive fields centers + computed 
-% disparity
-Index=sub2ind(size(Coarse_h_disparity{iframe}),ScatterPerimeter{iframe}(:,2),ScatterPerimeter{iframe}(:,1));
-xEstim = Coarse_h_disparity{iframe}(Index);
-yEstim = Coarse_v_disparity{iframe}(Index);
-xEstim = xEstim + ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2;
-yEstim = yEstim + ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2;
-plot(xEstim,yEstim,'bo')
-rectangle('Position',pos,'EdgeColor','r')
-title('Right Frame')
-hold off;
-
-%%%Horizontal Disparity surface
-figure('Name','Surfaces by M Path','NumberTitle','off')
-plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-    ,ScatterPerimeter{iframe}(:,3),'mo')
-colormap('default')
-colorbar();
-hold on
-mesh(Coarse_h_disparity{iframe})
-ax = gca;
-ax.YDir = 'reverse';
-axis([-20 60 0 80 -20 20])
-title('M Surface Stream(Horizontal disparity)')
-%legend('Sample Points','Interpolated Surface','Location','NorthWest')
-hold off
-
-%%%Vertical Disparity surface
-figure('Name','Surfaces by M Path','NumberTitle','off')
-plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-    ,ScatterPerimeter{iframe}(:,4),'mo')
-colormap('default')
-colorbar;
-hold on
-mesh(Coarse_v_disparity{iframe})
-ax = gca;
-ax.YDir = 'reverse';
-axis([-20 60 0 80 -20 20])
-title('M Surface Stream(Vertical disparity)')
-%legend('Sample Points','Interpolated Surface','Location','NorthWest')
-hold off
-
-%% Image morhping
-x_disparity=medfilt2(x_disparity);
-y_disparity=medfilt2(y_disparity);
- 
-x_disparity(isnan(x_disparity))=0;
-y_disparity(isnan(y_disparity))=0;
-
-% image filter
-%  h = ones(5,5)/25;
-%  x_disparity=imfilter(x_disparity,h);
-%  y_disparity=imfilter(y_disparity,h);
- 
-
-
-imgL=imgL(((yRes/2)-yInputSize/2)+1:((yRes/2)+yInputSize/2),...
-    ((xRes/2)-xInputSize/2)+1:((xRes/2)+xInputSize/2)); 
-imgR=imgR(((yRes/2)-yInputSize/2)+1:((yRes/2)+yInputSize/2),...
-    ((xRes/2)-xInputSize/2)+1:((xRes/2)+xInputSize/2));
-
-OriginalImgL=imgL;
-OriginalImgR=imgR;
-
-mrfimgL=OriginalImgL;
-
-for k = 1:length(xq(:))
-    tmpxIndex = int8(max(min(xq(k)+x_disparity(yq(k),xq(k)),40),1));
-    tmpyIndex = int8(max(min(yq(k)+y_disparity(yq(k),xq(k)),80),1));
-    mrfimgL(yq(k),xq(k))=OriginalImgR(tmpyIndex,tmpxIndex);
-end
-
-for k = 1:length(xq(:))
-    tmpxIndex = int8(max(min(xq(k)-x_disparity(yq(k),xq(k)),40),1));
-    tmpyIndex = int8(max(min(yq(k)-y_disparity(yq(k),xq(k)),80),1));
-    imgL(yq(k),xq(k))=mrfimgL(tmpyIndex,tmpxIndex);
-end
-
-% % image filter
-% h = ones(5,5)/25;
-% imgL=imfilter(imgL,h);
-% imgR=imfilter(imgR,h);
-
-CoarseMorphImgL=imgL;
-CoarseMorphImgR=imgR;
-
-
-%% Result of the combination
-h = ones(3,3)/9;
-Out(:,:,1) = imfilter(Out(:,:,1),h);
-Out(:,:,2) = imfilter(Out(:,:,2),h);
-
-x_disparity = x_disparity-Out(:,:,1);
-y_disparity = y_disparity-Out(:,:,2);
-
-
-Refined_hdisparity=F_h{iframe}(xq,yq)-Out(:,:,1);
-Refined_vdisparity=F_v{iframe}(xq,yq)-Out(:,:,2);
-mrfimgL=OriginalImgL;
-
-for k = 1:length(xq(:))
-    tmpxIndex = int8(max(min(xq(k)+x_disparity(yq(k),xq(k)),40),1));
-    tmpyIndex = int8(max(min(yq(k)+y_disparity(yq(k),xq(k)),80),1));
-    mrfimgL(yq(k),xq(k))=OriginalImgR(tmpyIndex,tmpxIndex);
-end
-
-for k = 1:length(xq(:))
-    tmpxIndex = int8(max(min(xq(k)-x_disparity(yq(k),xq(k)),40),1));
-    tmpyIndex = int8(max(min(yq(k)-y_disparity(yq(k),xq(k)),80),1));
-    imgL(yq(k),xq(k))=mrfimgL(tmpyIndex,tmpxIndex);
-end
-
-%filtering
-% h = ones(5,5)/25;
-% imgL=imfilter(imgL,h);
-% imgR=imfilter(imgR,h);
-
-
-
-FineMorphImgL=imgL;
-FineMorphImgR=imgR;
-
-
-%% Final results plots
-
-
-%%%Left Image
-figure('Name','Surfaces extraction and refining','NumberTitle','off')
-colormap(gray(65536));
-image(FramesL{iframe}); hold on;
-pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
-%adding firing cells
-plot(ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2,...
-ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2,'mo')
-rectangle('Position',pos,'EdgeColor','r')
-title('Left Frame')
-hold off
-
-%%%Right Image
-figure('Name','Surfaces extraction and refining','NumberTitle','off')
-colormap(gray(65536)); image(FramesR{iframe}); hold on;
-pos = [(xRes/2-xInputSize/2),(yRes/2-yInputSize/2),xInputSize,yInputSize];
-%adding estimations
-xEstim = F_h{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
-yEstim = F_v{iframe}(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2));
-xEstim = xEstim + ScatterPerimeter{iframe}(:,1)+(xRes-xInputSize)/2;
-yEstim = yEstim + ScatterPerimeter{iframe}(:,2)+(yRes-yInputSize)/2;
-plot(xEstim,yEstim,'bo')
-rectangle('Position',pos,'EdgeColor','r')
-title('Right Frame')
-hold off;
-
-%%%Horizontal Coarse Disparity surface
-figure('Name','Surfaces extraction and refining','NumberTitle','off')
-plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-    ,ScatterPerimeter{iframe}(:,3),'mo')
-colormap('default')
-colorbar();
-hold on
-[xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
-h_surface = F_h{iframe}(xq,yq);
-%h_surface = imfilter(h_surface,h);
-mesh(xq,yq, h_surface)
-ax3.YDir = 'reverse';
-axis([-20 60 0 80 -20 20])
-title('M Surface Stream(Horizontal disparity)')
-%legend('Sample Points','Interpolated Surface','Location','NorthWest')
-hold off
-
-%%%Vertical Coarse Disparity surface
-figure('Name','Surfaces extraction and refining','NumberTitle','off')
-plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-    ,ScatterPerimeter{iframe}(:,4),'mo')
-colormap('default')
-colorbar;
-hold on
-[xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
-v_surface = F_v{iframe}(xq,yq);
-%v_surface = imfilter(v_surface,h);
-mesh(xq,yq, v_surface)
-ax4.YDir = 'reverse';
-axis([-20 60 0 80 -20 20])
-title('M Surface Stream(Vertical disparity)')
-%legend('Sample Points','Interpolated Surface','Location','NorthWest')
-hold off
-
-
-%%%Horizontal Refined Disparity surface
-figure('Name','Surfaces extraction and refining','NumberTitle','off')
-plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-    ,ScatterPerimeter{iframe}(:,3),'mo')
-colormap('default')
-colorbar();
-hold on
-[xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
-mesh(xq,yq,Refined_hdisparity)
-ax5.YDir = 'reverse';
-axis([-20 60 0 80 -20 20])
-title('Refined (Horizontal disparity)')
-%legend('Sample Points','Interpolated Surface','Location','NorthWest')
-hold off
-
-%%%Vertical Refined Disparity surface
-figure('Name','Surfaces extraction and refining','NumberTitle','off')
-plot3(ScatterPerimeter{iframe}(:,1),ScatterPerimeter{iframe}(:,2)...
-    ,ScatterPerimeter{iframe}(:,4),'mo')
-colormap('default')
-colorbar;
-hold on
-[xq,yq]=meshgrid(1:xInputSize,1:yInputSize);
-mesh(xq,yq,Refined_vdisparity)
-ax6.YDir = 'reverse';
-axis([-20 60 0 80 -20 20])
-title('Refined Stream(Vertical disparity)')
-%legend('Sample Points','Interpolated Surface','Location','NorthWest')
-hold off
-
-
-
-
-%%%Left Original Image
-figure('Name','Morphing results','NumberTitle','off')
-colormap(gray(65536)); image(OriginalImgL); hold on;
-title('Left original image'); hold off;
-
-%%%Right Original Image
-figure('Name','Morphing results','NumberTitle','off')
-colormap(gray(65536)); image(OriginalImgR); hold on;
-title('Right original image'); hold off;
-
-%%%Difference
-figure('Name','Morphing results','NumberTitle','off')
-colormap('default'); mesh(xq,yq,(double(OriginalImgR)-double(OriginalImgL))/2^16); hold on;
-colorbar; caxis([-0.5,0.5]);
-title('Difference between frames'); hold off;
-corrMax=sum(sum(double(OriginalImgR).*double(OriginalImgR)));
-OriginalCorr = sum(sum(double(OriginalImgL(20:60,12:30)).*double(OriginalImgR(20:60,12:30))))/corrMax
-OriginalDiff = sum(sum(abs(double(OriginalImgR(20:60,12:30))-double(OriginalImgL(20:60,12:30)))))
-
-%%%Left coarse-morphed Image
-figure('Name','Morphing results','NumberTitle','off')
-colormap(gray(65536)); image(CoarseMorphImgL); hold on;
-title('Left coarse-morphed image'); hold off;
-
-%%%Difference
-figure('Name','Morphing results','NumberTitle','off')
-colormap('default'); mesh(xq,yq,(double(CoarseMorphImgR)-double(CoarseMorphImgL))/2^16); hold on;
-colorbar; caxis([-0.5,0.5]);
-title('Difference between frames'); hold off;
-CoarseCorr = sum(sum(double(CoarseMorphImgL(20:60,12:30)).*double(CoarseMorphImgR(20:60,12:30))))/corrMax
-CoarseDiff = sum(sum(abs(double(CoarseMorphImgR(20:60,12:30))-double(CoarseMorphImgL(20:60,12:30)))))
-
-%%%Left fine-morphed Image
-figure('Name','Morphing results','NumberTitle','off')
-colormap(gray(65536)); image(FineMorphImgL); hold on;
-title('Left fine-morphed image'); hold off;
-
-%%%Difference
-figure('Name','Morphing results','NumberTitle','off')
-colormap('default'); mesh(xq,yq,(double(FineMorphImgR)-double(FineMorphImgL))/2^16); hold on;
-colorbar;caxis([-0.5,0.5]);
-title('Difference between frame'); hold off;
-FineCorr = sum(sum(double(FineMorphImgL(20:60,12:30)).*double(FineMorphImgR(20:60,12:30))))/corrMax
-FineDiff = sum(sum(abs(double(FineMorphImgR(20:60,12:30))-double(FineMorphImgL(20:60,12:30)))))
-
-
+%% Tests
+% TODO prepare plots, morphs, tests and compute a new database
+inputsize = size(seg_frames_l);
+[xq,yq]=meshgrid(1:inputsize(2),1:inputsize(1));
+frame = 93;
+figure;
+refined_solution=fine_disp{frame}(:,:,1)+coarse_disp(:,:,frame,1);
+mesh(xq,yq,refined_solution);
+figure;
+mesh(xq,yq,coarse_disp(:,:,frame,1));
 
 

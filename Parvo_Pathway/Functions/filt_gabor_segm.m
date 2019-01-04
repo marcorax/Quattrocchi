@@ -1,6 +1,6 @@
-function [FI_n,f0] = filt_gabor(II,fname,DC_thr)
+function [FI_n,f0] = filt_gabor_segm(II,seg_masks,coarse_disparity,fname,DC_thr)
 
-if (nargin<3)
+if (nargin<5)
 %   DC_thr = 1e-10;
 DC_thr =0;
 end
@@ -18,14 +18,14 @@ IF = zeros(nr,nc,n_orient,n_frames,2);
 
 for camera = 1:2
     parfor frame = 1:n_frames
+        
         tmp_result = zeros(nr,nc,n_orient);
-        current_frame = II(:,:,frame,camera);
-
+        current_mask = seg_masks(:,:,frame,camera);
+        current_frame = II(:,:,frame,camera).*current_mask;
         %%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Horizontal and vertical %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%                
+        
         % 0 orient
 
         F1Y = conv2b(current_frame,F(1,:).',3);
@@ -125,7 +125,7 @@ for camera = 1:2
         odd = F7YF8X - F6YF9X;
 
         tmp_result(:,:,6) = complex(even,odd);
-
+        tmp_result = position_shift(tmp_result,squeeze(coarse_disparity(:,:,frame,:)));
         IF(:,:,:,frame,camera)=tmp_result;
     end
 end
@@ -135,4 +135,28 @@ IF(invalid) = NaN;
 
     FI_n{1}=real(IF);
     FI_n{2}=imag(IF);
+    
+function result = position_shift(matrix, disparity)
+% This function shifts the results of gabor filtering with previously
+% computed disparity, in a way that each parvo disparity neuron ad the end
+% will inherit position shift from the magno disparity neurons
+% matrix is a 3D matrix where the first two dimensions are the same as 
+% the cut frames and the third dimension is the orientation of the filter
+% Disaparity is a 3D matrix where the two first dimension are the same as 
+% the cut frames and the third one is 0 for horizonal disparity and 1 for
+% vertical disparity
+[ly,lx,~]=size(matrix);
+result = matrix;
+[indy,indx] = find(abs(disparity(:,:,1))+abs(disparity(:,:,2))~=0);
+indy_shift = int32(indy+round(disparity(sub2ind(size(disparity),indy,indx,ones(size(indy))*2))));
+indx_shift = int32(indx+round(disparity(sub2ind(size(disparity),indy,indx,ones(size(indy))*1))));
+% remove all shifts outside boundaries
+indy_shift = indy_shift((0>indy_shift)&(indy_shift>=ly));
+indx_shift = indx_shift((0>indx_shift)&(indx_shift>=lx));
+indy = indy((0>indy_shift)&(indy_shift>=ly));
+indx = indx((0>indx_shift)&(indx_shift>=lx));
+for orient = 1:8
+result(sub2ind(size(matrix),indy,indx,ones(size(indy))*orient)) = ...
+    matrix(sub2ind(size(matrix),indy_shift,indx_shift,ones(size(indy))*orient));
+end
 

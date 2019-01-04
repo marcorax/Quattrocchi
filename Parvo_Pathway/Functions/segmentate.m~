@@ -11,11 +11,10 @@ function [seg_frames_l,seg_frames_r]=segmentate(FramesL, FramesR, OnPop,...
                                                 nIterations, bord_thick)
 
 seg_frames_l = zeros(size(FramesL)); % Cells that will contain the segmented left frames 
-seg_frames_r = zeros(size(FramesL)); % Cells that will contain the segmented right frames 
+seg_frames_l = zeros(size(FramesL)); % Cells that will contain the segmented left frames 
 
-    parfor k = 1:length(FramesL)
-        framel= squeeze(FramesL(:,:,k));
-        framer= squeeze(FramesR(:,:,k));
+    parfor k = 1:length(Frames)
+        frame= squeeze(Frames(:,:,k));
         tmpPosOn = [];
         tmpPosOff = [];
         for kk=1:NOrient
@@ -35,36 +34,28 @@ seg_frames_r = zeros(size(FramesL)); % Cells that will contain the segmented rig
         % Extracting the unique centers that will be the starting point
         % for the active contours techinique
        
-        % Unique centers for the left and rigth frames
-        [UnCentersL,~,~] = unique(tmpPos(:,1:2),'rows');
-        [UnCentersR,~,~] = unique(tmpPos(:,3:4),'rows');
-        maskL = zeros(size(framel));
-        maskR = zeros(size(framer));
-
-        % In Matlab I need to use 1D indeces to access a predefined list of
+        % Centers for the left frame
+        [UnCenters,~,~] = unique(tmpPos(:,1:2),'rows');
+        
+        mask = zeros(size(frame));
+        
+        % In matlab I need to use 1D indeces to access a predefined list of
         % point in a matrix
-        IndexL=sub2ind(size(framel),UnCentersL(:,2),UnCentersL(:,1));
-        IndexR=sub2ind(size(framer),UnCentersR(:,2),UnCentersR(:,1));
-
-        maskL(IndexL) = 1;
-        maskR(IndexR) = 1;
-
+        Index=sub2ind(size(frame),UnCenters(:,2),UnCenters(:,1));
+        
+        % Maximum brightness value for a 16 bit unsigned value (The same
+        % of the sensor used: DAVIS240)
+        mask(Index) = 1;
+        
         if(bord_thick~=1)
             % Increase the size of the mask borders
-            maskL = logical(conv2(maskL, ones(bord_thick), 'same'));
-            maskR = logical(conv2(maskR, ones(bord_thick), 'same'));
-       end
+            mask = logical(conv2(mask, ones(bord_thick), 'same'));
+        end
         
-        tmp_seg_frame_l=double(activecontour(framel, maskL, nIterations));
-        tmp_seg_frame_r=double(activecontour(framer, maskR, nIterations));
-
-%         % putting zeros to NaN
-%         tmp_seg_frame_l(tmp_seg_frame_l == 0)= NaN;
-%         tmp_seg_frame_r(tmp_seg_frame_r == 0)= NaN;
-
-        seg_frames_l(:,:,k) = tmp_seg_frame_l;
-        seg_frames_r(:,:,k) = tmp_seg_frame_r;
-
+        tmp_seg_frame=double(activecontour(frame, mask, nIterations));
+        % putting zeros to NaN
+        tmp_seg_frame(tmp_seg_frame == 0)= NaN;
+        seg_frames(:,:,k) = tmp_seg_frame;
     end
 
 end
