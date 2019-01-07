@@ -815,8 +815,8 @@ for k in range(num_orientations):
 #    OutMat['OffPop'+str(k)] =  disparity_neurons_activity[str(k)]
 #    OutMat['OffPop'+str(k)+'t'] =  disparity_neurons_activity[str(k)+'t']
 
-OutMat['start'] = disparity_neurons_activity['start']
-OutMat['end'] = disparity_neurons_activity['end']
+OutMat['start'] = disparity_neurons_activity['start_t']
+OutMat['end'] = disparity_neurons_activity['end_t']
 
 
 

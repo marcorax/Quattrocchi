@@ -1,4 +1,7 @@
-function D = P_Disparity(II,coarse_disp,seg_masks,energy_thr,ori_thr,ph_shift_file,filter_file)
+function fine_disp = P_Disparity(II,coarse_disp,seg_masks,energy_thr,ori_thr,ph_shift_file,filter_file)
+
+% Put NaN seg_masks to 0 for computing the convolution
+seg_masks(isnan(seg_masks))=0;
 
 % Compute disparity refining with gabor filter 
 [FI,~] = filt_gabor_segm(II,seg_masks,coarse_disp,filter_file);
@@ -21,7 +24,14 @@ parfor frame = 1:n_frames
     invalid = isnan(D{frame});
     D{frame}(invalid) = NaN;
 end
-
+% Preparing the output
+fine_disp = zeros(size(coarse_disp));
+for frame = 1:n_frames
+    % Horizontal disparity
+    fine_disp(:,:,frame,1)=D{frame}(:,:,1);
+    % Vertical disparity
+    fine_disp(:,:,frame,2)=D{frame}(:,:,2);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%

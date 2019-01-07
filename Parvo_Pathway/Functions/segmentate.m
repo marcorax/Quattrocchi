@@ -12,6 +12,8 @@ function [seg_frames_l,seg_frames_r]=segmentate(FramesL, FramesR, OnPop,...
 
 seg_frames_l = zeros(size(FramesL)); % Cells that will contain the segmented left frames 
 seg_frames_r = zeros(size(FramesL)); % Cells that will contain the segmented right frames 
+% If required disable warnings (likely related to activecontour)
+
 
     parfor k = 1:length(FramesL)
         framel= squeeze(FramesL(:,:,k));
@@ -57,10 +59,10 @@ seg_frames_r = zeros(size(FramesL)); % Cells that will contain the segmented rig
         
         tmp_seg_frame_l=double(activecontour(framel, maskL, nIterations));
         tmp_seg_frame_r=double(activecontour(framer, maskR, nIterations));
-
-%         % putting zeros to NaN
-%         tmp_seg_frame_l(tmp_seg_frame_l == 0)= NaN;
-%         tmp_seg_frame_r(tmp_seg_frame_r == 0)= NaN;
+       
+        % putting zeros to NaN
+        tmp_seg_frame_l(tmp_seg_frame_l == 0)= NaN;
+        tmp_seg_frame_r(tmp_seg_frame_r == 0)= NaN;
 
         seg_frames_l(:,:,k) = tmp_seg_frame_l;
         seg_frames_r(:,:,k) = tmp_seg_frame_r;

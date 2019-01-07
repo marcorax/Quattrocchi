@@ -125,7 +125,12 @@ for camera = 1:2
         odd = F7YF8X - F6YF9X;
 
         tmp_result(:,:,6) = complex(even,odd);
-        tmp_result = position_shift(tmp_result,squeeze(coarse_disparity(:,:,frame,:)));
+        
+        if (camera == 2) % Rectificate right results on the position shift 
+                         % computed by the magno pathway
+            tmp_result = position_shift(tmp_result,squeeze(coarse_disparity(:,:,frame,:)));
+        end
+        
         IF(:,:,:,frame,camera)=tmp_result;
     end
 end
@@ -151,10 +156,11 @@ result = matrix;
 indy_shift = int32(indy+round(disparity(sub2ind(size(disparity),indy,indx,ones(size(indy))*2))));
 indx_shift = int32(indx+round(disparity(sub2ind(size(disparity),indy,indx,ones(size(indy))*1))));
 % remove all shifts outside boundaries
-indy_shift = indy_shift((0>indy_shift)&(indy_shift>=ly));
-indx_shift = indx_shift((0>indx_shift)&(indx_shift>=lx));
-indy = indy((0>indy_shift)&(indy_shift>=ly));
-indx = indx((0>indx_shift)&(indx_shift>=lx));
+valid_ind = (0<indy_shift)&(indy_shift<=ly)&(0<indx_shift)&(indx_shift<=lx);
+indy_shift = indy_shift(valid_ind);
+indx_shift = indx_shift(valid_ind);
+indy = indy(valid_ind);
+indx = indx(valid_ind);
 for orient = 1:8
 result(sub2ind(size(matrix),indy,indx,ones(size(indy))*orient)) = ...
     matrix(sub2ind(size(matrix),indy_shift,indx_shift,ones(size(indy))*orient));
