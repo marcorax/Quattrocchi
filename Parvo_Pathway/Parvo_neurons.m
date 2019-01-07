@@ -2,7 +2,7 @@
 % while producing a dense estimantion.
 
 clear all
-clc;
+clc
 addpath Functions
 addpath Filters
 

@@ -13,121 +13,119 @@ clear fltr;
 
 n_orient = 8;
 
-[nr,nc,n_frames,~] = size(II);
-IF = zeros(nr,nc,n_orient,n_frames,2);
+[nr,nc,~] = size(II);
+IF = zeros(nr,nc,n_orient,2);
 
 for camera = 1:2
-    parfor frame = 1:n_frames
-        tmp_result = zeros(nr,nc,n_orient);
-        current_frame = II(:,:,frame,camera);
+    tmp_result = zeros(nr,nc,n_orient);
+    current_frame = II(:,:,camera);
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Horizontal and vertical %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-        % 0 orient
-
-        F1Y = conv2b(current_frame,F(1,:).',3);
-        even = conv2b(F1Y,F(2,:),3);
-        odd = conv2b(F1Y,F(3,:),3);
-
-        tmp_result(:,:,1) = complex(even,odd);
-
-        % pi/2 orient
-
-        F1X = conv2b(current_frame,F(1,:),3);
-        even = conv2b(F1X,F(2,:).',3);
-        odd = conv2b(F1X,F(3,:).',3);
-
-        tmp_result(:,:,5) = complex(even,odd);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Horizontal and vertical %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-        %%%%%%%%%%%%
-        % Diagonal %
-        %%%%%%%%%%%%
+    % 0 orient
+
+    F1Y = conv2b(current_frame,F(1,:).',3);
+    even = conv2b(F1Y,F(2,:),3);
+    odd = conv2b(F1Y,F(3,:),3);
+
+    tmp_result(:,:,1) = complex(even,odd);
+
+    % pi/2 orient
+
+    F1X = conv2b(current_frame,F(1,:),3);
+    even = conv2b(F1X,F(2,:).',3);
+    odd = conv2b(F1X,F(3,:).',3);
+
+    tmp_result(:,:,5) = complex(even,odd);
 
 
-        F4Y = conv2b(current_frame,F(4,:).',3);
-
-        F4YF4X = conv2b(F4Y,F(4,:),3);
-        F4YF5X = conv2b(F4Y,F(5,:),3);
-
-        F5Y = conv2b(current_frame,F(5,:).',3);
-
-        F5YF4X = conv2b(F5Y,F(4,:),3);
-        F5YF5X = conv2b(F5Y,F(5,:),3);
-
-        % pi/4 orient
-
-        even = F4YF4X - F5YF5X;
-        odd = F5YF4X + F4YF5X;
-
-        tmp_result(:,:,3) = complex(even,odd);
-
-        % 3pi/4 orient
-
-        even = F4YF4X + F5YF5X;
-        odd = F5YF4X - F4YF5X;
-
-        tmp_result(:,:,7) = complex(even,odd);
+    %%%%%%%%%%%%
+    % Diagonal %
+    %%%%%%%%%%%%
 
 
-        %%%%%%%%%%%%%%%%%
-        % 'In-betweens' %
-        %%%%%%%%%%%%%%%%%
+    F4Y = conv2b(current_frame,F(4,:).',3);
+
+    F4YF4X = conv2b(F4Y,F(4,:),3);
+    F4YF5X = conv2b(F4Y,F(5,:),3);
+
+    F5Y = conv2b(current_frame,F(5,:).',3);
+
+    F5YF4X = conv2b(F5Y,F(4,:),3);
+    F5YF5X = conv2b(F5Y,F(5,:),3);
+
+    % pi/4 orient
+
+    even = F4YF4X - F5YF5X;
+    odd = F5YF4X + F4YF5X;
+
+    tmp_result(:,:,3) = complex(even,odd);
+
+    % 3pi/4 orient
+
+    even = F4YF4X + F5YF5X;
+    odd = F5YF4X - F4YF5X;
+
+    tmp_result(:,:,7) = complex(even,odd);
 
 
-        F8Y = conv2b(current_frame,F(8,:).',3);
+    %%%%%%%%%%%%%%%%%
+    % 'In-betweens' %
+    %%%%%%%%%%%%%%%%%
 
-        F8YF6X = conv2b(F8Y,F(6,:),3);
-        F8YF7X = conv2b(F8Y,F(7,:),3);
 
-        F9Y = conv2b(current_frame,F(9,:).',3);
+    F8Y = conv2b(current_frame,F(8,:).',3);
 
-        F9YF6X = conv2b(F9Y,F(6,:),3);
-        F9YF7X = conv2b(F9Y,F(7,:),3);
+    F8YF6X = conv2b(F8Y,F(6,:),3);
+    F8YF7X = conv2b(F8Y,F(7,:),3);
 
-        % pi/8 orient
+    F9Y = conv2b(current_frame,F(9,:).',3);
 
-        even = F8YF6X - F9YF7X;
-        odd = F9YF6X + F8YF7X;
+    F9YF6X = conv2b(F9Y,F(6,:),3);
+    F9YF7X = conv2b(F9Y,F(7,:),3);
 
-        tmp_result(:,:,2) = complex(even,odd);
+    % pi/8 orient
 
-        % 7pi/8 orient
+    even = F8YF6X - F9YF7X;
+    odd = F9YF6X + F8YF7X;
 
-        even = F8YF6X + F9YF7X;
-        odd = F9YF6X - F8YF7X;
+    tmp_result(:,:,2) = complex(even,odd);
 
-        tmp_result(:,:,8) = complex(even,odd);  
+    % 7pi/8 orient
 
-        F6Y = conv2b(current_frame,F(6,:).',3);
+    even = F8YF6X + F9YF7X;
+    odd = F9YF6X - F8YF7X;
 
-        F6YF8X = conv2b(F6Y,F(8,:),3);
-        F6YF9X = conv2b(F6Y,F(9,:),3);
+    tmp_result(:,:,8) = complex(even,odd);  
 
-        F7Y = conv2b(current_frame,F(7,:).',3);
+    F6Y = conv2b(current_frame,F(6,:).',3);
 
-        F7YF8X = conv2b(F7Y,F(8,:),3);
-        F7YF9X = conv2b(F7Y,F(9,:),3);
+    F6YF8X = conv2b(F6Y,F(8,:),3);
+    F6YF9X = conv2b(F6Y,F(9,:),3);
 
-        % 3pi/8 orient
+    F7Y = conv2b(current_frame,F(7,:).',3);
 
-        even = F6YF8X - F7YF9X;
-        odd = F7YF8X + F6YF9X;
+    F7YF8X = conv2b(F7Y,F(8,:),3);
+    F7YF9X = conv2b(F7Y,F(9,:),3);
 
-        tmp_result(:,:,4) = complex(even,odd);
+    % 3pi/8 orient
 
-        % 5pi/8
+    even = F6YF8X - F7YF9X;
+    odd = F7YF8X + F6YF9X;
 
-        even = F6YF8X + F7YF9X;
-        odd = F7YF8X - F6YF9X;
+    tmp_result(:,:,4) = complex(even,odd);
 
-        tmp_result(:,:,6) = complex(even,odd);
+    % 5pi/8
 
-        IF(:,:,:,frame,camera)=tmp_result;
-    end
+    even = F6YF8X + F7YF9X;
+    odd = F7YF8X - F6YF9X;
+
+    tmp_result(:,:,6) = complex(even,odd);
+
+    IF(:,:,:,camera)=tmp_result;
 end
 
 invalid = (abs(real(IF))<DC_thr) | (abs(imag(IF))<DC_thr);

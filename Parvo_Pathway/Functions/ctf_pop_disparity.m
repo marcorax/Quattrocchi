@@ -1,97 +1,108 @@
-function D = ctf_pop_disparity(II,n_scales,n_orient,energy_thr,ori_thr,ph_shift_file,filter_file)
+function Disparity = ctf_pop_disparity(frames,n_scales,energy_thr,ori_thr,ph_shift_file,filter_file)
 
-%%%%%%%%%%%%%%%%%%%%%%%
-% PADDING FOR PYRAMID %
-%%%%%%%%%%%%%%%%%%%%%%%
-
-[sy1, sx1, st] = size(II);
-
-if (st~=2)
-    error('size(II,3) should equal 2!\n');
-end
-fac = 2^(n_scales-1);
-
-sy2 = ceil(sy1 ./ fac) .* fac; % target resolution
-sx2 = ceil(sx1 ./ fac) .* fac; % target resolution
-
-II = [ II ; repmat(II(end,:,:),[sy2-sy1 1 1]) ]; % replicate border row
-II = [ II repmat(II(:,end,:),[1 sx2-sx1 1]) ];   % replicate border column
-
-II = image_pyramid(II,n_scales);
-
-
-%%%%%%%%%%%
-% Level 1 %
-%%%%%%%%%%%
-display('Scale #: 1');
-
-% COMPUTE GABOR FILTERING ON COARSER SCALE (REAL AND IMAG PART)
-[F] = filt_steer_or_gabor(II{1},filter_file);
-
-% COMPUTE PHASE SHIFT ON COARSER SCALE
-G{1,1}=F{1}(:,:,:,1); G{1,2}=F{2}(:,:,:,1);
-G(2,:)=shift_in_phase(F{1}(:,:,:,2),F{2}(:,:,:,2),ph_shift_file);
-clear F
-
-% PLOT FILTER SHAPE (uncomment to use it)
-% plot_filter(G)
-
-% POPULATION DECODING
-D = population(G,energy_thr,ori_thr,ph_shift_file);
-
-% MASK UNRELIABLE VALUE
-invalid = isnan(D);
-
-clear E G
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Coarse-to-fine Estimation and Merging %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-for scale = 2:n_scales
+[sy1, sx1, n_frames, st] = size(frames);
+D = cell(length(n_frames),1);
+parfor frame = 1:n_frames
+    %%%%%%%%%%%%%%%%%%%%%%%
+    % PADDING FOR PYRAMID %
+    %%%%%%%%%%%%%%%%%%%%%%%
+    G = cell(2);
+    II = squeeze(frames(:,:,frame,:));
     
-    display(['Scale #: ' num2str(scale)]);
-    
-    % EXPAND DISPARITY OF PREVIOUS SCALE
-    D = expand(D.*2);    
+    if (st~=2)
+        error('size(II,3) should equal 2!\n');
+    end
+    fac = 2^(n_scales-1);
 
-    % COMPUTE GABOR FILTERING ON CURRENT SCALE (REAL AND IMAG PART)
-    [F] = filt_steer_or_gabor(II{scale},filter_file);
-   
-    % COMPUTE PHASE SHIFT ON CURRENT SCALE
+    sy2 = ceil(sy1 ./ fac) .* fac; % target resolution
+    sx2 = ceil(sx1 ./ fac) .* fac; % target resolution
+
+    II = [ II ; repmat(II(end,:,:),[sy2-sy1 1 1]) ]; % replicate border row
+    II = [ II repmat(II(:,end,:),[1 sx2-sx1 1]) ];   % replicate border column
+
+    II = image_pyramid(II,n_scales);
+
+
+    %%%%%%%%%%%
+    % Level 1 %
+    %%%%%%%%%%%
+    % display('Scale #: 1');
+
+    % COMPUTE GABOR FILTERING ON COARSER SCALE (REAL AND IMAG PART)
+    [F] = filt_gabor(II{1},filter_file);
+
+    % COMPUTE PHASE SHIFT ON COARSER SCALE
     G{1,1}=F{1}(:,:,:,1); G{1,2}=F{2}(:,:,:,1);
     G(2,:)=shift_in_phase(F{1}(:,:,:,2),F{2}(:,:,:,2),ph_shift_file);
-    clear F
     
-    % WARP POPULATION RESPONSE ACCORDING TO DISPARITY OF PREVIOUS SCALE
-    G = warp_sequence(G,D);
-  
-    % POPULATION DECODING
-    Ds = population(G,energy_thr,ori_thr,ph_shift_file);
 
-    % MERGE DISPARITY OF PREVIOUS AND CURRENT SCALE
-    D = merge_disparity(D,Ds);
+    % PLOT FILTER SHAPE (uncomment to use it)
+    % plot_filter(G)
+
+    % POPULATION DECODING
+    tmp_disp = population(G,energy_thr,ori_thr,ph_shift_file);
+
+    % MASK UNRELIABLE VALUE
+    invalid = isnan(tmp_disp);
+
     
-    % MASK UNRELIABLE VALUES
-    invalid = isnan(Ds);
-    
-    clear G E
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Coarse-to-fine Estimation and Merging %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+    for scale = 2:n_scales
+
+        % display(['Scale #: ' num2str(scale)]);
+
+        % EXPAND DISPARITY OF PREVIOUS SCALE
+        tmp_disp = expand(tmp_disp.*2);    
+
+        % COMPUTE GABOR FILTERING ON CURRENT SCALE (REAL AND IMAG PART)
+        [F] = filt_gabor(II{scale},filter_file);
+
+        % COMPUTE PHASE SHIFT ON CURRENT SCALE
+        G{1,1}=F{1}(:,:,:,1); G{1,2}=F{2}(:,:,:,1);
+        G(2,:)=shift_in_phase(F{1}(:,:,:,2),F{2}(:,:,:,2),ph_shift_file);
+        
+
+        % WARP POPULATION RESPONSE ACCORDING TO DISPARITY OF PREVIOUS SCALE
+        G = warp_sequence(G,tmp_disp);
+
+        % POPULATION DECODING
+        Ds = population(G,energy_thr,ori_thr,ph_shift_file);
+
+        % MERGE DISPARITY OF PREVIOUS AND CURRENT SCALE
+        tmp_disp = merge_disparity(tmp_disp,Ds);
+
+        % MASK UNRELIABLE VALUES
+        invalid = isnan(Ds);
+
+        
+    end
+
+    % MASK UNRELIABLE VALUE
+    tmp_disp(invalid) = NaN;
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % REMOVE PADDING FOR PYRAMID %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    tmp_disp(end-(sy2-sy1-1):end,:,:) = [];
+    tmp_disp(:,end-(sx2-sx1-1):end,:) = [];
+    D{frame}=tmp_disp;
 end
 
-% MASK UNRELIABLE VALUE
-D(invalid) = NaN;
- 
- 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% REMOVE PADDING FOR PYRAMID %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-D(end-(sy2-sy1-1):end,:,:) = [];
-D(:,end-(sx2-sx1-1):end,:) = [];
-
-
-
+% Preparing the output
+Disparity = zeros(size(frames));
+for frame = 1:n_frames
+    % Horizontal disparity
+    Disparity(:,:,frame,1)=D{frame}(:,:,1);
+    % Vertical disparity
+    Disparity(:,:,frame,2)=D{frame}(:,:,2);
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
